@@ -75,7 +75,7 @@ function Profile() {
           >
             <p>
               <strong>User ID:</strong>{" "}
-              {user?._id}
+              {user?.userId || user?._id}
             </p>
           </div>
 
