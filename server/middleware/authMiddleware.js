@@ -1,39 +1,25 @@
 const jwt = require("jsonwebtoken");
 
-const protect = async (req, res, next) => {
-  console.log("AUTH HEADER:", req.headers.authorization);
+const protect = (req, res, next) => {
+  const authorization = req.headers.authorization || "";
+  const parts = authorization.trim().split(/\s+/);
 
-  let token;
-
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET
-      );
-
-      req.user = decoded;
-
-      return next();
-    } catch (error) {
-      console.log("JWT ERROR:", error.message);
-
-      return res.status(401).json({
-        success: false,
-        message: "Not Authorized",
-      });
-    }
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer" || !parts[1]) {
+    return res.status(401).json({ success: false, message: "Not Authorized" });
   }
 
-  return res.status(401).json({
-    success: false,
-    message: "No Token Found",
-  });
+  if (!process.env.JWT_SECRET) {
+    return res.status(503).json({ success: false, message: "Authentication service is not configured." });
+  }
+
+  try {
+    req.user = jwt.verify(parts[1], process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
+    return next();
+  } catch {
+    return res.status(401).json({ success: false, message: "Not Authorized" });
+  }
 };
 
 module.exports = protect;
